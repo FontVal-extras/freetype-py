@@ -126,3 +126,9 @@ FT_Stroker_Done             = _lib.FT_Stroker_Done
 FT_Glyph_Stroke             = _lib.FT_Glyph_Stroke
 FT_Glyph_StrokeBorder       = _lib.FT_Glyph_StrokeBorder
 FT_Glyph_To_Bitmap          = _lib.FT_Glyph_To_Bitmap
+
+try:
+    TT_Diagnostics_Set          = _lib.TT_Diagnostics_Set
+    TT_Diagnostics_Unset        = _lib.TT_Diagnostics_Unset
+except AttributeError:
+    raise RuntimeError('Freetype library without diagnostics hooks')
