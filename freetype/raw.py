@@ -132,3 +132,9 @@ try:
     TT_Diagnostics_Unset        = _lib.TT_Diagnostics_Unset
 except AttributeError:
     raise RuntimeError('Freetype library without diagnostics hooks')
+
+try:
+    FT_Property_Get    = _lib.FT_Property_Get
+    FT_Property_Set    = _lib.FT_Property_Set
+except AttributeError:
+    raise RuntimeError('FT_Property_Get/FT_Property_Set requires FreeType 2.7.x+')
