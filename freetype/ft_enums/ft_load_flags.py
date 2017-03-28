@@ -159,5 +159,6 @@ FT_LOAD_FLAGS = { 'FT_LOAD_DEFAULT'                      : 0x0,
                   'FT_LOAD_MONOCHROME'                   : 0x1000,
                   'FT_LOAD_LINEAR_DESIGN'                : 0x2000,
                   'FT_LOAD_NO_AUTOHINT'                  : 0x8000,
-                  'FT_LOAD_COLOR'                        : 0x100000 }
+                  'FT_LOAD_COLOR'                        : 0x100000,
+                  'FT_LOAD_COMPUTE_METRICS'              : 0x200000 }
 globals().update(FT_LOAD_FLAGS)
