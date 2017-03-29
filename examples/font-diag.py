@@ -74,7 +74,10 @@ if __name__ == '__main__':
             sDetails += ", At ByteOffset %d" % IP
             if (callTop > 0):
                 sDetails += ", In function %d" % opc + " offsetted by %d" % (IP - start)
-            print(sDetails, ":", fv_diag[message])
+            try:
+                print(sDetails, ":", fv_diag[message][0], fv_diag[message][1])
+            except KeyError:
+                pass
             return 0
         c_diagfunc = DIAGFUNCptr(py_diagfunc)
         TT_Diagnostics_Set(c_diagfunc)
