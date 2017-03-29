@@ -32,7 +32,7 @@ if __name__ == '__main__':
     # default from FreeType 2.7 onwards is 40
     got_version = c_int(0)
     FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
-    print "truetype interpreter-version:", got_version
+    print("truetype interpreter-version:", got_version)
 
     # try setting to 38 and checking
     version = c_int(38)
@@ -40,7 +40,7 @@ if __name__ == '__main__':
 
     got_version = c_int(0)
     FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
-    print "truetype interpreter-version:", got_version
+    print("truetype interpreter-version:", got_version)
 
     # try setting to 35 and checking
     version = c_int(35)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     got_version = c_int(0)
     FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
-    print "truetype interpreter-version:", got_version
+    print("truetype interpreter-version:", got_version)
 
     # back to 40
     version = c_int(40)
@@ -56,7 +56,7 @@ if __name__ == '__main__':
 
     got_version = c_int(0)
     FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
-    print "truetype interpreter-version:", got_version
+    print("truetype interpreter-version:", got_version)
 
     size = 10
     face.set_char_size( size * 64, 0, 96, 96 )
@@ -85,7 +85,7 @@ if __name__ == '__main__':
             sDetails += ", At ByteOffset %d" % IP
             if (callTop > 0):
                 sDetails += ", In function %d" % opc + " offsetted by %d" % (IP - start)
-            print sDetails, ":", message
+            print(sDetails, ":", message)
             return 0
         c_diagfunc = DIAGFUNCptr(py_diagfunc)
         TT_Diagnostics_Set(c_diagfunc)
