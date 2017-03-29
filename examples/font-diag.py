@@ -8,9 +8,6 @@
 # -----------------------------------------------------------------------------
 from freetype import *
 
-# prototype for diagnostics callback
-DIAGFUNCptr = CFUNCTYPE(c_int, c_char_p, c_char_p, c_int, c_int, c_int, c_int, c_int, c_int)
-
 if __name__ == '__main__':
     import sys
 
@@ -76,7 +73,7 @@ if __name__ == '__main__':
             if ( range_base == 3 ):
                 if (is_composite != 0):
                     sDetails += ", Composite Glyph ID %d" % ig
-		else:
+                else:
                     sDetails += ", Glyph ID %d" % ig
             elif (( range_base == 1 ) or ( range_base == 2)):
                 sDetails += ", Pre-Program"
