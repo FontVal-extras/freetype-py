@@ -8,7 +8,6 @@
 # -----------------------------------------------------------------------------
 from freetype import *
 
-
 def set_and_check_interpreter_version(x):
     library = get_handle()
     version = c_int(x)
@@ -75,7 +74,7 @@ if __name__ == '__main__':
             sDetails += ", At ByteOffset %d" % IP
             if (callTop > 0):
                 sDetails += ", In function %d" % opc + " offsetted by %d" % (IP - start)
-            print(sDetails, ":", message)
+            print(sDetails, ":", fv_diag[message])
             return 0
         c_diagfunc = DIAGFUNCptr(py_diagfunc)
         TT_Diagnostics_Set(c_diagfunc)

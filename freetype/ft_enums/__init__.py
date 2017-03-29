@@ -118,3 +118,4 @@ from freetype.ft_enums.tt_ms_langids import *
 from freetype.ft_enums.tt_mac_langids import *
 from freetype.ft_enums.tt_name_ids import *
 from freetype.ft_enums.tt_platforms import *
+from freetype.ft_enums.fv_diag import *
