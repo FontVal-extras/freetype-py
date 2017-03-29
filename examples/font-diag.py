@@ -8,6 +8,17 @@
 # -----------------------------------------------------------------------------
 from freetype import *
 
+
+def set_and_check_interpreter_version(x):
+    library = get_handle()
+    version = c_int(x)
+    FT_Property_Set(library, "truetype", "interpreter-version", byref(version))
+
+    got_version = c_int(0)
+    FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
+    print("truetype interpreter-version:", got_version)
+
+
 if __name__ == '__main__':
     import sys
 
@@ -24,36 +35,18 @@ if __name__ == '__main__':
     print ('Available sizes:     {}'.format(face.available_sizes))
     print ('')
 
-    library = get_handle()
 
     # default from FreeType 2.7 onwards is 40
-    got_version = c_int(0)
-    FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
-    print("truetype interpreter-version:", got_version)
+    set_and_check_interpreter_version(40)
 
     # try setting to 38 and checking
-    version = c_int(38)
-    FT_Property_Set(library, "truetype", "interpreter-version", byref(version))
-
-    got_version = c_int(0)
-    FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
-    print("truetype interpreter-version:", got_version)
+    set_and_check_interpreter_version(38)
 
     # try setting to 35 and checking
-    version = c_int(35)
-    FT_Property_Set(library, "truetype", "interpreter-version", byref(version))
-
-    got_version = c_int(0)
-    FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
-    print("truetype interpreter-version:", got_version)
+    set_and_check_interpreter_version(35)
 
     # back to 40
-    version = c_int(40)
-    FT_Property_Set(library, "truetype", "interpreter-version", byref(version))
-
-    got_version = c_int(0)
-    FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
-    print("truetype interpreter-version:", got_version)
+    set_and_check_interpreter_version(40)
 
     size = 10
     face.set_char_size( size * 64, 0, 96, 96 )
