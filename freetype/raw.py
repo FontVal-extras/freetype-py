@@ -135,6 +135,7 @@ try:
 except AttributeError:
     raise RuntimeError('Freetype library without diagnostics hooks')
 
+# FT_Property_Get/FT_Property_Set requires FreeType 2.7.x+
 try:
     FT_Property_Get    = _lib.FT_Property_Get
     FT_Property_Set    = _lib.FT_Property_Set
