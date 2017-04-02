@@ -150,6 +150,13 @@ try:
 except AttributeError:
     raise RuntimeError('FT_Property_Get/FT_Property_Set requires FreeType 2.7.x+')
 
+# These two are only found when TT debugger is enabled
+try:
+    TT_New_Context     = _lib.TT_New_Context
+    TT_RunIns          = _lib.TT_RunIns
+except AttributeError:
+    pass
+
 
 # Wholesale import of 102 routines which can be reasonably expected
 # to be found in freetype 2.2.x onwards. Some of these might need
