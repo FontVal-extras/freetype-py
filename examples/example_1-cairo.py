@@ -47,10 +47,6 @@ def main():
     pen     = FT_Vector()
     filename= 'Vera.ttf'
     text    = 'Hello World !'
-    # In case somebody want to try the example
-    # with a non-ascii phrase under python 2.x
-    if ( isinstance(text, str) ):
-        text = text.decode('utf8')
     num_chars = len(text)
     # FT_Angle is a 16.16 fixed-point value expressed in degrees.
     angle   = FT_Angle(25 * 65536)
