@@ -46,6 +46,10 @@ def main():
     pen     = FT_Vector()
     filename= 'Vera.ttf'
     text    = 'Hello World !'
+    # In case somebody want to try the example
+    # with a non-ascii phrase under python 2.x
+    if ( isinstance(text, str) ):
+        text = text.decode('utf8')
     num_chars = len(text)
     angle   = ( 25.0 / 360 ) * 3.14159 * 2
 
