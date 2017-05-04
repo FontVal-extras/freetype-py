@@ -6,11 +6,13 @@
 #  Distributed under the terms of the new BSD license.
 #
 #  rewrite of the numply,matplotlib-based example from Nicolas P. Rougier
-#  - The code is strickly speaking not optimal, as it ignores the 3rd order
-#    bezier curve bit and always intepolate between off-curve points.
+#  - The code is incomplete and over-simplified, as it ignores the 3rd order
+#    bezier curve bit when intepolating between off-curve points.
 #    This is only correct for truetype fonts (which only use 2nd order bezier curves).
 #  - Also it seems to assume the first point is always on curve; this is
 #    unusual but legal.
+#
+#  Can cope with well-behaved Postscript/CFF fonts too.
 #
 # -----------------------------------------------------------------------------
 '''
@@ -28,9 +30,6 @@ if __name__ == '__main__':
 
     # Replacement for Path enums:
     STOP, MOVETO, LINETO, CURVE3, CURVE4 = 0, 1, 2, 3, 4
-    def tag_meaning(tag):
-        # return on/off_curve(), is_3rd_order_control_point()
-        return [tag & 1 == 1, tag & 2 == 2]
 
     face = Face('./Vera.ttf')
     face.set_char_size( 32*64 )
@@ -53,8 +52,14 @@ if __name__ == '__main__':
     MARGIN  = 10
     scale = 3
 
-    width_s = ((bbox.xMax - bbox.xMin)//scale + 2 * MARGIN)
-    height_s = ((bbox.yMax - bbox.yMin)//scale + 2 * MARGIN)
+    def Floor64(x):
+        return (x//64) * 64
+
+    def Ceil64(x):
+        return ((x+63)//64) * 64
+
+    width_s = (width * 64)//scale + 2 * MARGIN
+    height_s = (rows * 64)//scale + 2 * MARGIN
 
     surface = SVGSurface('glyph-vector-2-cairo.svg',
                          width_s,
@@ -64,9 +69,9 @@ if __name__ == '__main__':
     ctx.paint()
     ctx.save()
     ctx.scale(1.0/scale,1.0/scale)
-    ctx.translate(-bbox.xMin + MARGIN * scale,-bbox.yMin + MARGIN * scale)
+    ctx.translate(-Floor64(bbox.xMin) + MARGIN * scale,-Floor64(bbox.yMin) + MARGIN * scale)
     ctx.transform(Matrix(1,0,0,-1))
-    ctx.translate(0, -(bbox.yMax + bbox.yMin)) # difference!
+    ctx.translate(0, -(Ceil64(bbox.yMax) + Floor64(bbox.yMin))) # difference!
 
     start, end = 0, 0
 
@@ -82,10 +87,11 @@ if __name__ == '__main__':
         segments = [ [points[0],], ]
         for j in range(1, len(points) ):
             segments[-1].append(points[j])
-            if tags[j] & (1 << 0) and j < (len(points)-1):
+            if ( FT_Curve_Tag( tags[j] ) == FT_Curve_Tag_On ) and j < (len(points)-1):
                 segments.append( [points[j],] )
         verts = [points[0], ]
         codes = [MOVETO,]
+        tags.pop()
         for segment in segments:
             if len(segment) == 2:
                 verts.extend(segment[1:])
@@ -93,7 +99,13 @@ if __name__ == '__main__':
             elif len(segment) == 3:
                 verts.extend(segment[1:])
                 codes.extend([CURVE3, CURVE3])
+            elif ( len(segment) == 4 ) \
+                 and ( FT_Curve_Tag(tags[1]) == FT_Curve_Tag_Cubic ) \
+                 and ( FT_Curve_Tag(tags[2]) == FT_Curve_Tag_Cubic ):
+                verts.extend(segment[1:])
+                codes.extend([CURVE4, CURVE4, CURVE4])
             else:
+                # Interpolating
                 verts.append(segment[1])
                 codes.append(CURVE3)
                 for i in range(1,len(segment)-2):
@@ -103,6 +115,7 @@ if __name__ == '__main__':
                     codes.extend([ CURVE3, CURVE3])
                 verts.append(segment[-1])
                 codes.append(CURVE3)
+            [tags.pop() for x in range(len(segment) - 1)]
         VERTS.extend(verts)
         CODES.extend(codes)
         start = end+1
@@ -124,8 +137,11 @@ if __name__ == '__main__':
                          VERTS[i+1][0],VERTS[i+1][1], # undocumented
                          VERTS[i+1][0],VERTS[i+1][1])
             i += 2
-        else:
-            raise NotImplementedError("Cannot cope!")
+        elif (CODES[i] == CURVE4):
+            ctx.curve_to(VERTS[i][0],VERTS[i][1],
+                         VERTS[i+1][0],VERTS[i+1][1],
+                         VERTS[i+2][0],VERTS[i+2][1])
+            i += 3
     ctx.fill_preserve()
     ctx.set_source_rgb(0,0,0)
     ctx.set_line_width(6)
