@@ -8,6 +8,8 @@
 #
 #  Note: On Mac OS X before Sierra (10.12), change ttc->ttf;
 #        try Google's NotoColorEmoji.ttf at size 109 on Linux.
+#
+#  Limitation: Suface.get_data() is not in the "python 3, pycairo < 1.11" combo.
 
 import freetype
 import numpy as np
@@ -31,9 +33,12 @@ if ( face.glyph.bitmap.pitch != width * 4 ):
 bitmap = np.array(bitmap.buffer, dtype=np.uint8).reshape((bitmap.rows,bitmap.width,4))
 
 I = ImageSurface(FORMAT_ARGB32, width, rows)
-ndI = np.ndarray(shape=(rows,width), buffer=I.get_data(),
-                 dtype=np.uint32, order='C',
-                 strides=[I.get_stride(), 4])
+try:
+    ndI = np.ndarray(shape=(rows,width), buffer=I.get_data(),
+                     dtype=np.uint32, order='C',
+                     strides=[I.get_stride(), 4])
+except NotImplementedError:
+    raise SystemExit("For python 3.x, you need pycairo >= 1.11+ (from https://github.com/pygobject/pycairo)")
 
 # Although both are 32-bit, cairo is host-order while
 # freetype is small endian.
