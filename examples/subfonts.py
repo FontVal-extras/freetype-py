@@ -15,6 +15,7 @@
 #  Also fontforge needs to be built with
 #  "./configure --enable-python-scripting --enable-python-extension" .
 #  This is often the case on Linux, anyway.
+#
 #  The command "echo 'import fontforge' | python" indicates whether
 #  the fontforge python extension is available. This command is silent on
 #  success, but shows "ImportError: No module named fontforge" on failure.
@@ -24,6 +25,7 @@
 #    the file "Adobe-Identity-0.cidmap" must be moved or renamed to be hidden
 #    from being found by fontforge. On Linux, it is in "/usr/share/fontforge".
 #    See https://github.com/fontforge/fontforge/issues/3084 .
+#
 #    On Ubuntu Linux, this file is in a separate "fontforge-extras" package.
 #    i.e. The Ubuntu "fontforge-extras" package must NOT be installed.
 #
@@ -36,13 +38,17 @@
 #    * Some Python API routines (e.g. "font.generate()" ) takes named
 #      arguments, so there is no need to specify every argument up-to a last
 #      non-default argument.
+#
 #    * The Python routines often take tuples i.e. named lists, for many of
 #      the input arguments which are bit flags.
+#
 #    * The first two arguments to the Python "font.simplify()" is swapped
 #      in position.
+#
 #    * "font.addExtrema()" (without any arguments) seems to have a different
 #      default compared to the legacy interface; not or poorly documented.
 #      See https://github.com/fontforge/fontforge/issues/3105
+#
 #    * Accessing unused encoding slots in Python throws TypeError, instead
 #      of returning False for "font[slot].isWorthOutputting()".
 #      See https://github.com/fontforge/fontforge/issues/3107
@@ -50,8 +56,9 @@
 #    * The two blocks of freetype-py code is to work around fontforge's
 #      problem coping with newer CJK fonts having glyphs at multiple encoding
 #      slots.
+#
 #      See https://github.com/fontforge/fontforge/issues/3080 and references
-#      therein.
+#      therein for the encoding issue.
 #
 # -----------------------------------------------------------------------------
 import fontforge
