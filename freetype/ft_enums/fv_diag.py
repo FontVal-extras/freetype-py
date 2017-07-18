@@ -164,7 +164,7 @@ fv_diag = {
     '_rast_W_Need_Newer_FreeType' : 
     [ 'W6019', 'The Freetype version is too old' ],
     '_rast_W_FT_VALUE_OUT_OF_RANGE_SLOOP' : 
-    [ 'W6020', 'Setting the loop variable to zero is an error' ],
+    [ 'W6020', 'Setting the loop variable to negative value' ],
     '_rast_W_FT_ZERO_LEN_FUNC' : 
     [ 'W6021', 'Defining zero-length function' ],
     '_rast_W_FT_ZERO_LEN_UD_INSTR' : 
@@ -180,5 +180,9 @@ fv_diag = {
     '_rast_W_FT_MAXP_maxComponentDepth_TOO_LOW' : 
     [ 'W6027', 'maxComponentDepth in maxp is too low' ],
     '_rast_W_FT_MAX_NUM_TWILIGHT_POINTS_CLAMP' : 
-    [ 'W6028', 'number of twilight points unreasonably large' ]
+    [ 'W6028', 'number of twilight points unreasonably large' ],
+    '_rast_W_FT_VALUE_OUT_OF_RANGE_SLOOP_ZERO' :
+    [ 'W6029', 'Setting the loop variable to zero is an error' ],
+    '_rast_W_FT_ALIGNRP_AFTER_IUP' :
+    [ 'W6030', 'ALIGNRP after IUP in Subpixel-hinting mode' ]
 }
