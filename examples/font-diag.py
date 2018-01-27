@@ -52,7 +52,7 @@ if __name__ == '__main__':
     lf = FT_LOAD_DEFAULT|FT_LOAD_NO_AUTOHINT|FT_LOAD_MONOCHROME|FT_LOAD_COMPUTE_METRICS
     lf |= FT_LOAD_TARGET_MONO
     for ig in range(face.num_glyphs):
-        def py_diagfunc(message,
+        def py_diagfunc(messcode, message,
                         opcode,
                         range_base,
                         is_composite,
@@ -80,6 +80,6 @@ if __name__ == '__main__':
                 pass
             return 0
         c_diagfunc = DIAGFUNCptr(py_diagfunc)
-        TT_Diagnostics_Set(c_diagfunc)
+        TT_Diagnostics_Set(face._FT_Face, c_diagfunc)
         face.load_glyph(ig, lf)
-        TT_Diagnostics_Unset()
+        TT_Diagnostics_Unset(face._FT_Face)

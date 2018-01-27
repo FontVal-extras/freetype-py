@@ -139,7 +139,7 @@ try:
     TT_Diagnostics_Set          = _lib.TT_Diagnostics_Set
     TT_Diagnostics_Unset        = _lib.TT_Diagnostics_Unset
     # prototype for diagnostics callback
-    DIAGFUNCptr = CFUNCTYPE(c_int, c_char_p, c_char_p, c_int, c_int, c_int, c_int, c_int, c_int)
+    DIAGFUNCptr = CFUNCTYPE(c_int, c_int, c_char_p, c_char_p, c_int, c_int, c_int, c_int, c_int, c_int)
 except AttributeError:
     raise RuntimeError('Freetype library without diagnostics hooks')
 
