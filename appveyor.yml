@@ -60,6 +60,7 @@ test_script:
 
   # run tests from installed wheel
   - cd tests
+  - python -c "import freetype; print('Using FreeType version ', freetype.version())"
   - pytest
 
 artifacts:
@@ -67,14 +68,12 @@ artifacts:
   - path: dist\*.whl
 
 on_success:
- # deploy wheels on tags to PyPI
- - ps: >-
-     if($env:APPVEYOR_REPO_TAG -eq 'true') {
-       Write-Output ("Deploying " + $env:APPVEYOR_REPO_TAG_NAME + " to PyPI...")
-       pip install --upgrade twine
-       # If powershell ever sees anything on stderr it thinks it's a fail.
-       # So we use cmd to redirect stderr to stdout before PS can see it.
-       cmd /c 'twine upload dist\*.whl 2>&1'
-     } else {
-       Write-Output "Not deploying as this is not a tagged commit"
-     }
+  - ps: >-
+      if ($env:APPVEYOR_REPO_TAG -eq 'true') {
+        Write-Output ("Deploying " + $env:APPVEYOR_REPO_TAG_NAME + " to PyPI...")
+        cd ..
+        pip install --upgrade twine
+        twine upload dist\*.whl
+      } else {
+        Write-Output "Not deploying as this is not a tagged commit"
+      }
