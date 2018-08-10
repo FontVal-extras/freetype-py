@@ -52,7 +52,7 @@ if __name__ == '__main__':
     lf = FT_LOAD_DEFAULT|FT_LOAD_NO_AUTOHINT|FT_LOAD_MONOCHROME|FT_LOAD_COMPUTE_METRICS
     lf |= FT_LOAD_TARGET_MONO
     for ig in range(face.num_glyphs):
-        def py_diagfunc(messcode, message,
+        def py_diagfunc(face__FT_Face_ptr, messcode, message,
                         opcode,
                         range_base,
                         is_composite,
