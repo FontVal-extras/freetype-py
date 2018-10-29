@@ -48,7 +48,9 @@ face = Face(sys.argv[1])
 face.set_charmap( face.charmap )
 reverse_lookup = {}
 charcode, gindex = face.get_first_char()
+codes = []
 while ( gindex ):
+    codes.append(charcode)
     if ( gindex in reverse_lookup.keys() ):
         reverse_lookup[gindex].append( charcode )
     else:
@@ -65,6 +67,7 @@ if ( font.cidfontname != "" ):
 
 font.reencode("ucs4")
 
+duplicate_count = 0
 # 2nd block of freetype-py code:
 for gindex in reverse_lookup.keys():
     if ( len(reverse_lookup[gindex]) > 1 ):
@@ -82,8 +85,25 @@ for gindex in reverse_lookup.keys():
             else:
                 print( 'Destination Full!' )
             font.paste()
+            #print( "copy %d to %d" % (reverse_lookup[gindex][-1], reverse_lookup[gindex][x]) )
+            duplicate_count += 1
 # 2nd block of freetype-py code ends.
 
+if (duplicate_count > 0):
+    print( "Duplicated %d glyphs because some glyph map to multiple code points." % duplicate_count )
+glyph_count = sum(1 for _ in font.glyphs())
+print( "glyph count = %d" % glyph_count )
+
+excess = glyph_count - 65535
+if (excess > 0):
+    print( "***Unfortunately glyph count > 65535... we'll need to delete %d glyphs.***" % excess )
+    print( "***Deleting %d glyphs from unicode 0x%06Xu to 0x%06Xu.***" % (excess, codes[-excess], codes[-1]) )
+    for charcode in (codes[-excess:]):
+        #print( "removing charcode %d" % charcode)
+        font.selection.select(charcode)
+        font.clear()
+
+    print( "New glyph count = %d" % sum(1 for _ in font.glyphs()) )
 font.selection.all()
 
 font.generate(sys.argv[2])
