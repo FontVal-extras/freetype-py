@@ -16,8 +16,7 @@ language: python
 # The travis Python version is unrelated to the version we build and test
 # with.  This is set with the MB_PYTHON_VERSION variable.
 python: 3.5
-sudo: required
-dist: trusty
+dist: xenial
 services: docker
 
 cache:

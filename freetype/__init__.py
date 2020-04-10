@@ -15,14 +15,24 @@ Note: C Library will be searched using the ctypes.util.find_library. However,
       this search might fail. In such a case (or for other reasons), you may
       have to specify an explicit path below.
 '''
+import io
 import sys
 from ctypes import *
+import ctypes.util
+import struct
 
 from freetype.raw import *
 
 # Hack to get unicode class in python3
 PY3 = sys.version_info[0] == 3
 if PY3: unicode = str
+
+
+def unmake_tag(i):
+    # roughly opposite of FT_MAKE_TAG, converts 32-bit int to Python string
+    # could do with .to_bytes if limited to Python 3.2 or higher...
+    b = struct.pack('>I', i)
+    return b.decode('ascii', errors='replace')
 
 _handle = None
 
@@ -164,6 +174,28 @@ def _encode_filename(filename):
 Vector = FT_Vector
 Matrix = FT_Matrix
 
+
+# -----------------------------------------------------------------------------
+# Handling for FT_Done_MM_Var, which was added in FreeType 2.9. Prior to that,
+# we need to import libc and use libc free on the memory allocated for the
+# FT_MM_Var data structure. See Face.get_variation_info().
+# -----------------------------------------------------------------------------
+if version() < (2,9,1):
+    if platform.system() == "Windows":
+        libcpath = ctypes.util.find_library("msvcrt")
+    else:
+        libcpath = ctypes.util.find_library("c")
+    libc = CDLL(libcpath)
+    libc.free.argtypes = [c_void_p]
+    libc.free.restype = None
+
+    def FT_Done_MM_Var_func(p):
+        libc.free(p)
+else:
+    def FT_Done_MM_Var_func(p):
+        error = FT_Done_MM_Var(get_handle(), p)
+        if error:
+            raise FT_Exception("Failure calling FT_Done_MM_Var")
 
 
 # -----------------------------------------------------------------------------
@@ -653,6 +685,85 @@ class Outline( object ):
         FT_Outline_Get_CBox(byref(self._FT_Outline), byref(bbox))
         return BBox(bbox)
 
+    _od_move_to_noop = FT_Outline_MoveToFunc(lambda a, b: 0)
+    def _od_move_to_builder(self, cb):
+        if cb is None:
+            return self._od_move_to_noop
+        def move_to(a, b):
+            return cb(a[0], b) or 0
+        return FT_Outline_MoveToFunc(move_to)
+
+    _od_line_to_noop = FT_Outline_LineToFunc(lambda a, b: 0)
+    def _od_line_to_builder(self, cb):
+        if cb is None:
+            return self._od_line_to_noop
+        def line_to(a, b):
+            return cb(a[0], b) or 0
+        return FT_Outline_LineToFunc(line_to)
+
+    _od_conic_to_noop = FT_Outline_ConicToFunc(lambda a, b, c: 0)
+    def _od_conic_to_builder(self, cb):
+        if cb is None:
+            return self._od_conic_to_noop
+        def conic_to(a, b, c):
+            return cb(a[0], b[0], c) or 0
+        return FT_Outline_ConicToFunc(conic_to)
+
+    _od_cubic_to_noop = FT_Outline_CubicToFunc(lambda a, b, c, d: 0)
+    def _od_cubic_to_builder(self, cb):
+        if cb is None:
+            return self._od_cubic_to_noop
+        def cubic_to(a, b, c, d):
+            return cb(a[0], b[0], c[0], d) or 0
+        return FT_Outline_CubicToFunc(cubic_to)
+
+    def decompose(self, context=None, move_to=None, line_to=None, conic_to=None, cubic_to=None, shift=0, delta=0):
+        '''
+        Decompose the outline into a sequence of move, line, conic, and
+        cubic segments.
+
+        :param context: Arbitrary contextual object which will be passed as
+                        the last parameter of all callbacks. Typically an
+                        object to be drawn to, but can be anything.
+
+        :param move_to: Callback which will be passed an `FT_Vector`
+                        control point and the context. Called when outline
+                        needs to jump to a new path component.
+
+        :param line_to: Callback which will be passed an `FT_Vector`
+                        control point and the context. Called to draw a
+                        straight line from the current position to the
+                        control point.
+
+        :param conic_to: Callback which will be passed two `FT_Vector`
+                         control points and the context. Called to draw a
+                         second-order Bézier curve from the current
+                         position using the passed control points.
+
+        :param curve_to: Callback which will be passed three `FT_Vector`
+                         control points and the context. Called to draw a
+                         third-order Bézier curve from the current position
+                         using the passed control points.
+
+        :param shift: Passed to FreeType which will transform vectors via
+                      `x = (x << shift) - delta` and `y = (y << shift) - delta`
+
+        :param delta: Passed to FreeType which will transform vectors via
+                      `x = (x << shift) - delta` and `y = (y << shift) - delta`
+
+        :since: 1.3
+        '''
+        func = FT_Outline_Funcs(
+            move_to = self._od_move_to_builder(move_to),
+            line_to = self._od_line_to_builder(line_to),
+            conic_to = self._od_conic_to_builder(conic_to),
+            cubic_to = self._od_cubic_to_builder(cubic_to),
+            shift = shift,
+            delta = FT_Pos(delta),
+        )
+
+        error = FT_Outline_Decompose( byref(self._FT_Outline), byref(func), py_object(context) )
+        if error: raise FT_Exception( error )
 
 
 
@@ -788,7 +899,7 @@ class Glyph( object ):
           FT_GLYPH_BBOX_PIXELS.
         '''
         bbox = FT_BBox()
-        error = FT_Glyph_Get_CBox(byref(self._FT_Glyph), bbox_mode, byref(bbox))
+        error = FT_Glyph_Get_CBox(byref(self._FT_Glyph.contents), bbox_mode, byref(bbox))
         if error: raise FT_Exception(error)
         return BBox(bbox)
 
@@ -961,12 +1072,12 @@ class Face( object ):
     FreeType root face class structure. A face object models a typeface in a
     font file.
     '''
-    def __init__( self, filename, index = 0 ):
+    def __init__( self, path_or_stream, index = 0 ):
         '''
         Build a new Face
 
-        :param str filename:
-            A path to the font file.
+        :param Union[str, typing.BinaryIO] path_or_stream:
+            A path to the font file or an io.BytesIO stream.
 
         :param int index:
                The index of the face within the font.
@@ -975,21 +1086,51 @@ class Face( object ):
         library = get_handle( )
         face = FT_Face( )
         self._FT_Face = None
-        #error = FT_New_Face( library, filename, 0, byref(face) )
+        #error = FT_New_Face( library, path_or_stream, 0, byref(face) )
         self._filebodys = []
-        try:
-            u_filename = c_char_p(_encode_filename(filename))
-            error = FT_New_Face( library, u_filename, index, byref(face) )
-        except UnicodeError:
-            with open(filename, mode='rb') as f:
-                filebody = f.read()
-            error = FT_New_Memory_Face( library, filebody, len(filebody),
-                                        index, byref(face) )
-            self._filebodys.append(filebody)  # prevent gc
-        if error: raise FT_Exception( error )
-        self._filename = filename
+        if hasattr(path_or_stream, "read"):
+            error = self._init_from_memory(library, face, index, path_or_stream.read())
+        else:
+            try:
+                error = self._init_from_file(library, face, index, path_or_stream)
+            except UnicodeError:
+                with open(path_or_stream, mode="rb") as f:
+                    filebody = f.read()
+                error = self._init_from_memory(library, face, index, filebody)
+        if error:
+            raise FT_Exception(error)
         self._index = index
         self._FT_Face = face
+        self._name_strings = dict()
+
+    def _init_from_file(self, library, face, index, path):
+        u_filename = c_char_p(_encode_filename(path))
+        error = FT_New_Face(library, u_filename, index, byref(face))
+        return error
+
+    def _init_from_memory(self, library, face, index, byte_stream):
+        error = FT_New_Memory_Face(
+            library, byte_stream, len(byte_stream), index, byref(face)
+        )
+        self._filebodys.append(byte_stream)  # prevent gc
+        return error
+
+    def _init_name_string_map(self):
+        # build map of (nID, pID, eID, lID) keys to name string bytes
+        self._name_strings = dict()
+
+        for nidx in range(self._get_sfnt_name_count()):
+            namerec = self.get_sfnt_name(nidx)
+            nk = (namerec.name_id,
+                    namerec.platform_id,
+                    namerec.encoding_id,
+                    namerec.language_id)
+
+            self._name_strings[nk] = namerec.string
+
+    @classmethod
+    def from_bytes(cls, bytes_, index=0):
+         return cls(io.BytesIO(bytes_), index)
 
     def __del__( self ):
         '''
@@ -1415,6 +1556,169 @@ class Face( object ):
         error = FT_Get_Sfnt_Name( self._FT_Face, index, byref(name) )
         if error: raise FT_Exception( error )
         return SfntName( name )
+
+    def get_best_name_string(self, nameID, default_string='', preferred_order=None):
+        '''
+        Retrieve a name string given nameID. Searches available font names
+        matching nameID and returns the decoded bytes of the best match.
+        "Best" is defined as a preferred list of platform/encoding/languageIDs
+        which can be overridden by supplying a preferred_order matching the
+        scheme of 'sort_order' (see below).
+
+        The routine will attempt to decode the string's bytes to a Python str, when the
+        platform/encoding[/langID] are known (Windows, Mac, or Unicode platforms).
+ 
+        If you prefer more control over name string selection and decoding than
+        this routine provides:
+            - call self._init_name_string_map()
+            - use (nameID, platformID, encodingID, languageID) as a key into 
+              the self._name_strings dict
+       '''
+        if not(self._name_strings):
+            self._init_name_string_map()
+
+        sort_order = preferred_order or (
+            (3, 1, 1033),  # Microsoft/Windows/US English
+            (1, 0, 0),     # Mac/Roman/English
+            (0, 6, 0),     # Unicode/SMP/*
+            (0, 4, 0),     # Unicode/SMP/*
+            (0, 3, 0),     # Unicode/BMP/*
+            (0, 2, 0),     # Unicode/10646-BMP/*
+            (0, 1, 0),     # Unicode/1.1/*
+        )
+
+        # get all keys matching nameID
+        keys_present = [k for k in self._name_strings.keys() if k[0] == nameID]
+
+        if keys_present:
+            # sort found keys by sort_order
+            key_order = {k: v for v, k in enumerate(sort_order)}
+            keys_present.sort(key=lambda x: key_order.get(x[1:4]))
+            best_key = keys_present[0]
+            nsbytes = self._name_strings[best_key]
+
+            if best_key[1:3] == (3, 1) or best_key[1] == 0:
+                enc = "utf-16-be"
+            elif best_key[1:4] == (1, 0, 0):
+                enc = "mac-roman"
+            else:
+                enc = "unicode_escape"
+
+            ns = nsbytes.decode(enc)
+
+        else:
+            ns = default_string
+
+        return ns
+
+    def get_variation_info(self):
+        '''
+        Retrieves variation space information for the current face.
+        '''
+        if version() < (2, 8, 1):
+            raise NotImplementedError("freetype-py VF support requires FreeType 2.8.1 or later")
+
+        p_amaster = pointer(FT_MM_Var())
+        error = FT_Get_MM_Var(self._FT_Face, byref(p_amaster))
+        
+        if error:
+            raise FT_Exception(error)
+
+        vsi = VariationSpaceInfo(self, p_amaster)
+
+        FT_Done_MM_Var_func(p_amaster)
+
+        return vsi
+
+    def get_var_blend_coords(self):
+        '''
+        Get the current blend coordinates (-1.0..+1.0)
+        '''
+        vsi = self.get_variation_info()
+        num_coords = len(vsi.axes)
+        ft_coords = (FT_Fixed * num_coords)()
+        error = FT_Get_Var_Blend_Coordinates(self._FT_Face, num_coords, byref(ft_coords))
+
+        if error:
+            raise FT_Exception(error)
+
+        coords = tuple([ft_coords[ai]/65536.0 for ai in range(num_coords)])
+
+        return coords
+
+    def set_var_blend_coords(self, coords, reset=False):
+        '''
+        Set blend coords. Using reset=True will set all axes to
+        their default coordinates.
+        '''
+        if reset:
+            error = FT_Set_Var_Blend_Coordinates(self._FT_Face, 0, 0)
+        else:
+            num_coords = len(coords)
+            ft_coords = [int(round(c * 65536.0)) for c in coords]
+            coords_array = (FT_Fixed * num_coords)(*ft_coords)
+            error = FT_Set_Var_Blend_Coordinates(self._FT_Face, num_coords, byref(coords_array))
+
+        if error:
+            raise FT_Exception(error)
+
+    def get_var_design_coords(self):
+        '''
+        Get the current design coordinates
+        '''
+        vsi = self.get_variation_info()
+        num_coords = len(vsi.axes)
+        ft_coords = (FT_Fixed * num_coords)()
+        error = FT_Get_Var_Design_Coordinates(self._FT_Face, num_coords, byref(ft_coords))
+
+        if error:
+            raise FT_Exception(error)
+
+        coords = tuple([ft_coords[ai]/65536.0 for ai in range(num_coords)])
+
+        return coords
+
+    def set_var_design_coords(self, coords, reset=False):
+        '''
+        Set design coords. Using reset=True will set all axes to
+        their default coordinates.
+        '''
+        if reset:
+            error = FT_Set_Var_Design_Coordinates(self._FT_Face, 0, 0)
+        
+        else:
+            num_coords = len(coords)
+            ft_coords = [int(round(c * 65536.0)) for c in coords]
+            coords_array = (FT_Fixed * num_coords)(*ft_coords)
+            error = FT_Set_Var_Design_Coordinates(self._FT_Face, num_coords, byref(coords_array))
+
+        if error:
+            raise FT_Exception(error)
+
+    def set_var_named_instance(self, instance_name):
+        '''
+        Set instance by name. This will work with any FreeType with variable support
+        (for our purposes: v2.8.1 or later). If the actual FT_Set_Named_Instance()
+        function is available (v2.9.1 or later), we use it (which, despite what you might
+        expect from its name, sets instances by *index*). Otherwise we just use the coords
+        of the named instance (if found) and call self.set_var_design_coords.
+        '''
+        have_func = freetype.version() >= (2, 9, 1)
+        vsi = self.get_variation_info()
+
+        for inst_idx, inst in enumerate(vsi.instances, start=1):
+            if inst.name == instance_name:
+                if have_func:
+                    error = FT_Set_Named_Instance(self._FT_Face, inst_idx)
+                else:
+                    error = self.set_var_design_coords(inst.coords)
+
+                if error:
+                    raise FT_Exception(error)
+
+                break
+
+        # named instance not found; do nothing
 
     def _get_postscript_name( self ):
         return FT_Get_Postscript_Name( self._FT_Face )
@@ -1952,3 +2256,65 @@ class Stroker( object ):
         :param outline: The target outline.
         '''
         FT_Stroker_Export( self._FT_Stroker, outline._FT_Outline )
+
+
+# -----------------------------------------------------------------------------
+# Classes related to Variable Font support
+#
+class VariationAxis(object):
+    tag = None
+    coords = tuple()
+
+    def __init__(self, ftvaraxis):
+        self.tag = unmake_tag(ftvaraxis.tag)
+        self.name = ftvaraxis.name.decode('ascii')
+        self.minimum = ftvaraxis.minimum/65536.0
+        self.default = ftvaraxis.default/65536.0
+        self.maximum = ftvaraxis.maximum/65536.0
+        self.strid = ftvaraxis.strid  # do we need this? Should be same as 'name'...
+
+    def __repr__(self):
+        return "<VariationAxis '{}' ('{}') [{}, {}, {}]>".format(
+            self.tag, self.name, self.minimum, self.default, self.maximum)
+
+class VariationInstance(object):
+    def __init__(self, name, psname, coords):
+        self.name = name
+        self.psname = psname
+        self.coords = coords
+
+    def __repr__(self):
+        return "<VariationInstance '{}' {}>".format(
+            self.name, self.coords)
+
+class VariationSpaceInfo(object):
+    """
+    VF info (axes & instances).
+    """
+    def __init__(self, face, p_ftmmvar):
+        """
+        Build a VariationSpaceInfo object given face (freetype.Face) and
+        p_ftmmvar (pointer to FT_MM_Var).
+        """
+        ftmv = p_ftmmvar.contents
+
+        axes = []
+        for axidx in range(ftmv.num_axis):
+            axes.append(VariationAxis(ftmv.axis[axidx]))
+
+        self.axes = tuple(axes)
+
+        inst = []
+        for instidx in range(ftmv.num_namedstyles):
+            instinfo = ftmv.namedstyle[instidx]
+            nid = instinfo.strid
+            name = face.get_best_name_string(nid)
+            psid = instinfo.psid
+            psname = face.get_best_name_string(psid)
+            coords = []
+            for cidx in range(len(self.axes)):
+                coords.append(instinfo.coords[cidx]/65536.0)
+
+            inst.append(VariationInstance(name, psname, tuple(coords)))
+
+        self.instances = tuple(inst)
