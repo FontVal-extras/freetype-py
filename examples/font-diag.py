@@ -60,7 +60,7 @@ if __name__ == '__main__':
                         callTop,
                         opc,
                         start ):
-            sDetails = "Size %d" % size + ", " + opcode
+            sDetails = "Size %d" % size + ", " + opcode.decode()
             # python does not have 'switch' statements.
             if ( range_base == 3 ):
                 if (is_composite != 0):
@@ -74,9 +74,12 @@ if __name__ == '__main__':
             sDetails += ", At ByteOffset %d" % IP
             if (callTop > 0):
                 sDetails += ", In function %d" % opc + " offsetted by %d" % (IP - start)
+            message = message.decode()
             try:
                 print(sDetails, ":", fv_diag[message][0], fv_diag[message][1])
             except KeyError:
+                # fallback, in case the array and backend go out-of-sync.
+                print(sDetails, "@", message)
                 pass
             return 0
         c_diagfunc = DIAGFUNCptr(py_diagfunc)
