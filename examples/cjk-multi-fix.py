@@ -30,8 +30,13 @@
 #    On Ubuntu Linux, this file is in a separate "fontforge-extras" package.
 #    i.e. The Ubuntu "fontforge-extras" package must NOT be installed.
 #
+#    Recent fontforge (on Fedora 36) does not seems to look at python site
+#    packages. In particular, you may need to set
+#    PYTHONPATH=/usr/lib/python3.10/site-packages/ to find the freetype module.
+#
 # -----------------------------------------------------------------------------
 import fontforge
+#print(sys.path)
 from freetype import Face
 import time
 import locale
