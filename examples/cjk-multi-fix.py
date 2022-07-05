@@ -23,7 +23,8 @@
 #  *** Important ***:
 #    To process many Adobe CFF OpenType fonts correctly (e.g. Source/Noto CJK),
 #    the file "Adobe-Identity-0.cidmap" must be moved or renamed to be hidden
-#    from being found by fontforge. On Linux, it is in "/usr/share/fontforge".
+#    from being found by fontforge. On Linux, it is in "/usr/share/fontforge"
+#    or "/usr/share/fontforge/cidmap/".
 #    See https://github.com/fontforge/fontforge/issues/3084 .
 #
 #    On Ubuntu Linux, this file is in a separate "fontforge-extras" package.
