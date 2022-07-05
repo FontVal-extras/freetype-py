@@ -132,6 +132,11 @@ FT_Outline_GetInsideBorder  = _lib.FT_Outline_GetInsideBorder
 FT_Outline_GetOutsideBorder = _lib.FT_Outline_GetOutsideBorder
 FT_Outline_Get_BBox         = _lib.FT_Outline_Get_BBox
 FT_Outline_Get_CBox         = _lib.FT_Outline_Get_CBox
+try:
+    # since 2.4.10
+    FT_Outline_EmboldenXY       = _lib.FT_Outline_EmboldenXY
+except AttributeError:
+    pass
 FT_Stroker_New              = _lib.FT_Stroker_New
 FT_Stroker_Set              = _lib.FT_Stroker_Set
 FT_Stroker_Rewind           = _lib.FT_Stroker_Rewind
@@ -284,6 +289,7 @@ FT_Outline_Reverse             = _lib.FT_Outline_Reverse
 FT_Outline_Transform           = _lib.FT_Outline_Transform
 FT_Outline_Translate           = _lib.FT_Outline_Translate
 FT_Remove_Module               = _lib.FT_Remove_Module
+FT_Render_Glyph                = _lib.FT_Render_Glyph
 FT_RoundFix                    = _lib.FT_RoundFix
 FT_Set_Debug_Hook              = _lib.FT_Set_Debug_Hook
 FT_Set_MM_Blend_Coordinates    = _lib.FT_Set_MM_Blend_Coordinates
