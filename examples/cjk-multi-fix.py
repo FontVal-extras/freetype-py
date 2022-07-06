@@ -100,7 +100,8 @@ if (duplicate_count > 0):
 glyph_count = sum(1 for _ in font.glyphs())
 print( "glyph count = %d" % glyph_count )
 
-excess = glyph_count - 65535
+# Reserve 2 for .null and CR/nonmarkingreturn, up to opentype 1.7 or fontforge 20220308
+excess = glyph_count - 65535 + 2
 if (excess > 0):
     print( "***Unfortunately glyph count > 65535... we'll need to delete %d glyphs.***" % excess )
     print( "***Deleting %d glyphs from unicode 0x%06Xu to 0x%06Xu.***" % (excess, codes[-excess], codes[-1]) )
