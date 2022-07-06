@@ -34,6 +34,10 @@
 #    packages. In particular, you may need to set
 #    PYTHONPATH=/usr/lib/python3.10/site-packages/ to find the freetype module.
 #
+#    Fontforge seems to have partial understanding of CJK Compatibility Ideographs,
+#    and emits a few "No glyph with unicode U+0XXXX in font" when glyphs are
+#    re-used.
+#
 # -----------------------------------------------------------------------------
 import fontforge
 #print(sys.path)
