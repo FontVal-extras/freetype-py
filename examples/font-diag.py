@@ -11,10 +11,15 @@ from freetype import *
 def set_and_check_interpreter_version(x):
     library = get_handle()
     version = c_int(x)
-    FT_Property_Set(library, "truetype", "interpreter-version", byref(version))
+    truetype = "truetype"
+    interpreter_version = "interpreter-version"
+    if sys.version >= '3':
+        truetype = b"truetype"
+        interpreter_version = b"interpreter-version"
+    FT_Property_Set(library, truetype, interpreter_version, byref(version))
 
     got_version = c_int(0)
-    FT_Property_Get(library, "truetype", "interpreter-version", byref(got_version))
+    FT_Property_Get(library, truetype, interpreter_version, byref(got_version))
     print("truetype interpreter-version:", got_version)
 
 
